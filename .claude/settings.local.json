@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx ui-ux-pro-max-cli *)",
+      "Bash(python \"d:/ideas/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"spiritual mystical cosmic elegant\" --domain color -n 5)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)"
+    ]
+  }
+}

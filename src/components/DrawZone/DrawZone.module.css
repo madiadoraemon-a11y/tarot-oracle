@@ -1,0 +1,398 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DrawZone — 抽牌区
+   Moonlight Oracle aesthetic: dark, mystical, gold-accented
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Container ── */
+
+.container {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--space-lg);
+  background: linear-gradient(
+    160deg,
+    rgba(18, 18, 42, 0.85) 0%,
+    rgba(10, 10, 20, 0.92) 50%,
+    rgba(26, 26, 62, 0.85) 100%
+  );
+  border: 1px solid var(--color-gold-dim);
+  border-radius: 12px;
+  box-shadow:
+    0 0 2px rgba(201, 169, 110, 0.25),
+    0 0 8px rgba(201, 169, 110, 0.12),
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(201, 169, 110, 0.08);
+}
+
+/* Subtle inner glow ring */
+.container::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(201, 169, 110, 0.08);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Header
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid rgba(201, 169, 110, 0.15);
+  position: relative;
+  z-index: 1;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+  font-weight: 600;
+  color: var(--color-gold);
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(201, 169, 110, 0.3);
+}
+
+.progress {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--color-gold-dim);
+  letter-spacing: 1px;
+  background: rgba(201, 169, 110, 0.06);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: 20px;
+  border: 1px solid rgba(201, 169, 110, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Spread layout area
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.spreadWrapper {
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+
+/*
+ * Percentage-based positions live inside this relative container.
+ * aspect-ratio keeps the layout proportional at all screen widths
+ * so (x%, y%) coordinates map consistently to visual position.
+ */
+.spreadArea {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(45, 27, 78, 0.22) 0%,
+    rgba(10, 10, 20, 0) 70%
+  );
+  border-radius: 8px;
+  overflow: visible;
+}
+
+/* ── Position slot (absolutely placed at x%, y%) ── */
+
+.position {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-content);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Empty slot
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.emptySlot {
+  width: calc(var(--card-width) * 0.7);
+  height: calc(var(--card-height) * 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  border: 1.5px dashed var(--color-gold-dim);
+  border-radius: 8px;
+  background: rgba(201, 169, 110, 0.03);
+  transition:
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal),
+    background var(--transition-normal);
+  cursor: default;
+}
+
+.emptySlotActive {
+  border-color: var(--color-gold);
+  border-style: solid;
+  background: rgba(201, 169, 110, 0.08);
+  animation: goldPulse 2.5s ease-in-out infinite;
+}
+
+.positionLabel {
+  font-family: var(--font-display);
+  font-size: clamp(0.72rem, 1.4vw, 0.88rem);
+  color: var(--color-gold-pale);
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(201, 169, 110, 0.2);
+  line-height: 1.3;
+  padding: 0 var(--space-xs);
+}
+
+.drawHint {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--color-gold);
+  letter-spacing: 1px;
+  opacity: 0.8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Filled slot (card present)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.filledSlot {
+  position: relative;
+  cursor: pointer;
+}
+
+.filledSlot * {
+  cursor: pointer;
+}
+
+/* Flipped card gets a subtle gold undertone */
+.filledSlotFlipped {
+  filter: drop-shadow(0 0 6px rgba(201, 169, 110, 0.2));
+}
+
+/* Wraps the TarotCardComponent */
+.cardContainer {
+  position: relative;
+}
+
+/* ── Flip hint (pulsing text below face-down card) ── */
+
+.flipHint {
+  position: absolute;
+  bottom: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  letter-spacing: 1.5px;
+  color: var(--color-gold-dim);
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 0 4px rgba(201, 169, 110, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Action buttons
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin-top: var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
+
+/* Shared button base */
+.revealAllBtn,
+.viewResultBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-2xl);
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  letter-spacing: 2px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    box-shadow var(--transition-normal),
+    transform var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── 全部翻牌 button ── */
+
+.revealAllBtn {
+  color: var(--color-abyss);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold-bright) 0%,
+    var(--color-gold) 50%,
+    var(--color-gold-dim) 100%
+  );
+  border: 1px solid var(--color-gold-bright);
+  box-shadow:
+    0 0 12px rgba(201, 169, 110, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.revealAllBtn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 60%
+  );
+  border-radius: 7px;
+  pointer-events: none;
+}
+
+.revealAllBtn:hover {
+  box-shadow:
+    0 0 20px rgba(224, 200, 124, 0.45),
+    0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* ── 查看解读 button ── */
+
+.viewResultBtn {
+  color: var(--color-gold-bright);
+  background: linear-gradient(
+    135deg,
+    rgba(45, 27, 78, 0.8) 0%,
+    rgba(26, 26, 62, 0.9) 50%,
+    rgba(45, 27, 78, 0.8) 100%
+  );
+  border: 1px solid var(--color-purple);
+  box-shadow:
+    0 0 14px rgba(124, 58, 237, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.viewResultBtn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 60%
+  );
+  border-radius: 7px;
+  pointer-events: none;
+}
+
+.viewResultBtn:hover {
+  box-shadow:
+    0 0 24px rgba(124, 58, 237, 0.5),
+    0 0 8px rgba(201, 169, 110, 0.25),
+    0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Button decorative icons ── */
+
+.btnIcon {
+  font-size: 0.75em;
+  opacity: 0.7;
+}
+
+.revealAllBtn .btnIcon {
+  color: var(--color-abyss);
+}
+
+.viewResultBtn .btnIcon {
+  color: var(--color-gold);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Responsive adjustments
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  .container {
+    padding: var(--space-md);
+    border-radius: 8px;
+    max-width: 100%;
+  }
+
+  .container::before {
+    inset: 4px;
+    border-radius: 5px;
+  }
+
+  .header {
+    margin-bottom: var(--space-sm);
+  }
+
+  .title {
+    font-size: 1.05rem;
+    letter-spacing: 1.5px;
+  }
+
+  .progress {
+    font-size: 0.8rem;
+    padding: 2px var(--space-sm);
+  }
+
+  .emptySlot {
+    width: calc(var(--card-width) * 0.58);
+    height: calc(var(--card-height) * 0.58);
+  }
+
+  .positionLabel {
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+  }
+
+  .flipHint {
+    font-size: 0.62rem;
+    bottom: -22px;
+  }
+
+  .revealAllBtn,
+  .viewResultBtn {
+    padding: var(--space-sm) var(--space-xl);
+    font-size: 0.9rem;
+    letter-spacing: 1.5px;
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    padding: var(--space-sm);
+  }
+
+  .spreadArea {
+    aspect-ratio: 3 / 5;
+  }
+
+  .emptySlot {
+    width: calc(var(--card-width) * 0.5);
+    height: calc(var(--card-height) * 0.5);
+  }
+
+  .positionLabel {
+    font-size: 0.62rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+}
