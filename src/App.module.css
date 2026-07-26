@@ -24,3 +24,9 @@
   position: relative;
   z-index: var(--z-content);
 }
+
+@media (max-width: 640px) {
+  .page {
+    padding: var(--space-md);
+  }
+}

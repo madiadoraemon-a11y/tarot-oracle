@@ -120,3 +120,28 @@
   flex-shrink: 0;
   width: calc(50vw - var(--card-width) / 2 - var(--space-sm));
 }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .shuffleText {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
+
+  .drawInstruction {
+    font-size: 0.85rem;
+  }
+
+  .reshuffleBtn {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+  }
+
+  .cardRow {
+    padding: var(--space-sm) 0;
+  }
+
+  .cardTrack {
+    gap: 4px;
+  }
+}
