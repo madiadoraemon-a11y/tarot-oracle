@@ -41,6 +41,7 @@ interface ReadingRecord {
   timeStr: string;
   question: string;
   spreadName: string;
+  readingContent: string;
   cards: Array<{
     nameZh: string;
     nameEn: string;
@@ -179,6 +180,9 @@ function renderAdminPage(records: ReadingRecord[]): string {
       <td>${esc(r.spreadName)}</td>
       <td>${esc(r.question || '(无问题)')}</td>
       <td>${r.cards.map(c => esc(`${c.nameZh}${c.orientation === 'reversed' ? '(逆)' : ''} [${c.positionLabel}]`)).join('<br>')}</td>
+      <td>
+        ${r.readingContent ? `<button class="toggleBtn" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.textContent.includes('+')?this.textContent.replace('+','-').replace('展开','收起'):'- 收起 '+this.textContent.split(' ').pop()">+ 展开</button><div class="readingText">${esc(r.readingContent)}</div>` : '(无)'}
+      </td>
     </tr>
   `).join('');
 
@@ -196,14 +200,17 @@ function renderAdminPage(records: ReadingRecord[]): string {
   th { color: #c9a96e; position: sticky; top: 0; background: #0a0a1a; }
   tr:hover { background: rgba(201,169,110,0.05); }
   .count { color: #888; margin-bottom: 16px; }
+  .toggleBtn { cursor: pointer; color: #c9a96e; background: none; border: 1px solid rgba(201,169,110,0.3); border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+  .readingText { display: none; margin-top: 6px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; max-width: 400px; white-space: pre-wrap; font-size: 12px; line-height: 1.6; max-height: 300px; overflow-y: auto; }
+  .readingText.open { display: block; }
 </style>
 </head>
 <body>
 <h1>🔮 塔罗解读记录</h1>
 <p class="count">共 ${records.length} 条记录（最近 50 条）</p>
 <table>
-<thead><tr><th>时间</th><th>牌阵</th><th>问题</th><th>卡牌</th></tr></thead>
-<tbody>${rows || '<tr><td colspan="4">暂无记录</td></tr>'}</tbody>
+<thead><tr><th>时间</th><th>牌阵</th><th>问题</th><th>卡牌</th><th>AI解读</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="5">暂无记录</td></tr>'}</tbody>
 </table>
 </body>
 </html>`;
@@ -230,9 +237,6 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
   if ((body.question?.length ?? 0) > 500) {
     return corsResponse(Response.json({ error: 'Question too long' }, { status: 400 }));
   }
-
-  // Save reading record to KV (don't block response)
-  const savePromise = saveRecord(env, body);
 
   const apiKey = env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -271,15 +275,15 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
       ));
     }
 
-    const stream = aiResp.body;
-    if (!stream) {
-      return corsResponse(Response.json({ error: 'No response stream' }, { status: 502 }));
-    }
+    // Read full response to capture AI content, then stream back to client
+    const fullText = await aiResp.text();
+    const readingContent = extractContentFromSSE(fullText);
 
-    await savePromise;
+    // Save to KV with the AI reading content
+    await saveRecord(env, body, readingContent);
 
     return corsResponse(
-      new Response(stream, {
+      new Response(fullText, {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -295,7 +299,7 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
 
 // ── Save reading record to KV ──
 
-async function saveRecord(env: Env, body: ReadingRequest): Promise<void> {
+async function saveRecord(env: Env, body: ReadingRequest, content: string): Promise<void> {
   try {
     const now = new Date();
     const ts = Date.now();
@@ -306,6 +310,7 @@ async function saveRecord(env: Env, body: ReadingRequest): Promise<void> {
       timeStr: now.toISOString().replace('T', ' ').slice(0, 19),
       question: body.question || '',
       spreadName: body.spread.name,
+      readingContent: content.slice(0, 5000),
       cards: body.cards
         .sort((a, b) => a.drawOrder - b.drawOrder)
         .map(c => ({
@@ -320,6 +325,23 @@ async function saveRecord(env: Env, body: ReadingRequest): Promise<void> {
   } catch (err) {
     console.error('KV save error:', err);
   }
+}
+
+// ── Extract plain text from SSE stream ──
+
+function extractContentFromSSE(sse: string): string {
+  const lines = sse.split('\n');
+  let content = '';
+  for (const line of lines) {
+    if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+      try {
+        const parsed = JSON.parse(line.slice(6));
+        const token = parsed.choices?.[0]?.delta?.content || '';
+        content += token;
+      } catch { /* skip */ }
+    }
+  }
+  return content;
 }
 
 // ── Follow-up handler ──
