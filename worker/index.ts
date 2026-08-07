@@ -53,28 +53,23 @@ interface ReadingRecord {
 // ── System prompt ──
 
 function buildSystemPrompt(): string {
-  return `你是一位温和、智慧且富有同理心的塔罗牌解读师。你的解读风格融合了传统塔罗象征与现代心理学视角。
+  return `你是一名资深的塔罗师。你融合传统塔罗象征与现代心理学视角进行解读。
 
-## 核心规则
-1. 你不会做确定性的未来预言，不诊断疾病，不提供法律/投资建议，不使用恐吓语言。
-2. 你鼓励用户保有自主决定权，塔罗是自我反思的工具。
-3. 你的语言温暖、包容、不评判。
-4. 你始终基于牌面含义、牌位和牌之间的关联进行解读。
+核心规则：
+1. 不做确定性的未来预言，不诊断疾病，不提供法律/投资建议，不使用恐吓语言。
+2. 鼓励用户保有自主决定权，塔罗是自我反思的工具。
+3. 语言温暖、包容、不评判。
+4. 始终基于牌面含义、牌位和牌之间的关联进行解读。
 
-## 解读结构
-当给定牌阵信息时，请按以下结构回应：
-1. **开篇回应**：根据用户的问题和整体牌面，给出2-3句直接而温和的总体回应。
-2. **逐牌解读**：对每一张牌，结合其牌位含义、正逆位和基础牌义进行解读。解释该牌在此位置的意义。
-3. **牌际关联**：指出牌与牌之间的呼应、冲突、推动或阻碍关系。这是个性化解读的核心。
-4. **核心主题**：总结2-3个贯穿整个牌阵的核心主题或启示。
-5. **行动建议**：提供可选的小步骤或思考方向，以温和建议的语气。
-6. **温馨提醒**：提醒用户，这些解读仅供自我反思，最终的决定权始终在用户手中。
+按以下结构回应：
+1. 开篇回应：根据用户问题和牌面，给出2-3句直接的总体回应。不要提及牌阵名称或牌的数量。
+2. 逐牌解读：对每张牌，结合牌位含义、正逆位和基础牌义进行解读。
+3. 牌际关联：指出牌与牌之间的呼应、冲突、推动或阻碍关系。
+4. 核心主题：总结2-3个贯穿牌阵的核心主题（不要使用任何加粗或星号标记）。
+5. 行动建议：提供可选的小步骤或思考方向。
+6. 温馨提醒：提醒用户解读仅供自我反思，决定权在用户手中。
 
-## 风格要求
-- 使用流畅、优美的中文
-- 避免机械地复述牌义，而是将牌义与用户的具体问题和牌位结合
-- 不要用"你将会..."的绝对预言句式，改用"这可能提示..."、"值得留意的是..."等开放表达
-- 保持积极和有建设性的基调，即使面对挑战牌（逆位/宝剑等），也要指出可能的成长方向`;
+风格：流畅优美的中文，避免绝对预言句式，保持积极有建设性的基调。`;
 }
 
 // ── Build user message from structured request ──
@@ -84,25 +79,23 @@ function buildUserMessage(req: ReadingRequest): string {
     .sort((a, b) => a.drawOrder - b.drawOrder)
     .map((c, i) => {
       const pos = req.spread.positions.find(p => p.id === c.positionId);
-      const posName = pos ? `${pos.name}（${pos.meaning || ''}）` : c.positionId;
-      return `### 第${i + 1}张：${c.nameZh}（${c.name}）— ${c.orientation === 'upright' ? '正位' : '逆位'}
-- 牌位：${posName}
-- 基础牌义：${c.baseMeaning}`;
+      const posName = pos ? pos.name : c.positionId;
+      const orient = c.orientation === 'upright' ? '正位' : '逆位';
+      return `第${i + 1}张：${c.nameZh}（${c.name}）${orient}，牌位：${posName}，含义：${c.baseMeaning}`;
     })
-    .join('\n\n');
+    .join('\n');
 
-  const questionLine = req.question
-    ? `用户的问题：「${req.question}」`
-    : '用户未提出具体问题，请根据牌面给出整体指引。';
+  const questionIntro = req.question
+    ? `对于问题「${req.question}」，`
+    : '';
 
-  return `${questionLine}
+  return `${questionIntro}抽出了以下塔罗牌：
 
-## 牌阵：${req.spread.name}（${req.spread.id}）
-
-## 抽牌结果：
 ${cardDescriptions}
 
-请根据以上信息，为该用户提供完整的塔罗牌解读。`;
+牌阵为${req.spread.name}。
+
+请你帮我解读。`;
 }
 
 // ── Main handler ──
@@ -275,15 +268,18 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
       ));
     }
 
-    // Read full response to capture AI content, then stream back to client
-    const fullText = await aiResp.text();
-    const readingContent = extractContentFromSSE(fullText);
+    // Read full response, clean it, then stream back to client
+    const rawSSE = await aiResp.text();
+    const rawContent = extractContentFromSSE(rawSSE);
+    const cleanedContent = cleanContent(rawContent);
 
-    // Save to KV with the AI reading content
-    await saveRecord(env, body, readingContent);
+    // Save cleaned content to KV
+    await saveRecord(env, body, cleanedContent);
 
+    // Re-wrap as SSE and return
+    const cleanedSSE = wrapAsSSE(cleanedContent);
     return corsResponse(
-      new Response(fullText, {
+      new Response(cleanedSSE, {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -342,6 +338,44 @@ function extractContentFromSSE(sse: string): string {
     }
   }
   return content;
+}
+
+// ── Clean AI response content ──
+
+function cleanContent(text: string): string {
+  let cleaned = text;
+
+  // Remove "本次使用……牌阵……含义" patterns in opening response
+  // Matches sentences like "本次使用「XXX」牌阵，共抽出N张牌……"
+  cleaned = cleaned.replace(/本次使用[^。！？\n]*牌阵[^。！？\n]*[。]/g, '');
+
+  // Strip ** markers
+  cleaned = cleaned.replace(/\*\*/g, '');
+
+  // Remove local offline warning (safety net, shouldn't come from DeepSeek)
+  cleaned = cleaned.replace(/[⚠>]\s*以上解读由本地生成[^\n。！？]*[。]?/g, '');
+
+  // Collapse blank lines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  return cleaned;
+}
+
+// ── Re-wrap plain text as SSE data stream ──
+
+function wrapAsSSE(text: string): string {
+  const lines: string[] = [];
+  // Split into small chunks to simulate streaming
+  let remaining = text;
+  while (remaining.length > 0) {
+    // Take chunks of ~6 chars for a streaming feel
+    const chunkSize = Math.min(6 + Math.floor(Math.random() * 4), remaining.length);
+    const chunk = remaining.slice(0, chunkSize);
+    remaining = remaining.slice(chunkSize);
+    lines.push(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n`);
+  }
+  lines.push('data: [DONE]\n');
+  return lines.join('');
 }
 
 // ── Follow-up handler ──

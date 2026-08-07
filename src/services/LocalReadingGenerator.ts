@@ -133,7 +133,7 @@ export function generateLocalReading(req: ReadingRequest): string {
   const questionLine = req.question
     ? `你提出了关于「${req.question}」的问题，`
     : '';
-  lines.push(`${opening}${questionLine}本次使用「${req.spread.name}」牌阵，共抽出${cards.length}张牌。让我逐一为你分析每张牌在此牌阵中的含义。`);
+  lines.push(`${opening}${questionLine}让我逐一为你分析每张牌的含义。`);
   lines.push('');
 
   // ── 2. 逐牌解读 ──
@@ -176,8 +176,6 @@ export function generateLocalReading(req: ReadingRequest): string {
   lines.push('');
   lines.push(pick(CLOSINGS));
   lines.push('');
-  lines.push('> ⚠ 以上解读由本地生成（离线模式），仅供娱乐和自我反思。');
-  lines.push('');
 
   return lines.join('\n');
 }
@@ -201,7 +199,7 @@ function generateThemes(cards: CardInfo[]): string {
     return '本次解读的核心主题围绕自我认知与内在成长展开，牌面邀请你更深入地了解自己的内心世界。';
   }
 
-  return `综合所有牌面讯息，本次解读的核心主题可以归纳为以下几点：\n\n1. **${selected[0] || '自我觉察'}**：这是贯穿整个牌阵的主线，值得你深入反思。\n2. **${selected[1] || '内在平衡'}**：牌面提示你关注生活中各个面向的协调与平衡。\n3. **${selected[2] || '积极行动'}**：牌面鼓励你在合适的时机迈出行动的一步。`;
+  return `综合所有牌面讯息，本次解读的核心主题可以归纳为以下几点：\n\n1. ${selected[0] || '自我觉察'}：这是贯穿整个牌阵的主线，值得你深入反思。\n2. ${selected[1] || '内在平衡'}：牌面提示你关注生活中各个面向的协调与平衡。\n3. ${selected[2] || '积极行动'}：牌面鼓励你在合适的时机迈出行动的一步。`;
 }
 
 // ── Suggestion generation ──
