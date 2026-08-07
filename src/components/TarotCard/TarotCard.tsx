@@ -13,6 +13,7 @@ interface TarotCardProps {
   small?: boolean;
   onClick?: () => void;
   'data-card-index'?: number;
+  'data-card-id'?: string;
 }
 
 const TarotCardComponent = memo(function TarotCardComponent({
@@ -23,11 +24,13 @@ const TarotCardComponent = memo(function TarotCardComponent({
   small = false,
   onClick,
   'data-card-index': dataCardIndex,
+  'data-card-id': dataCardId,
 }: TarotCardProps) {
   return (
     <motion.div
       className={`${styles.cardWrapper} ${small ? styles.small : ''} ${isDrawn ? styles.drawn : ''}`}
       data-card-index={dataCardIndex}
+      data-card-id={dataCardId}
       whileHover={!isDrawn ? { scale: 1.04, y: -4 } : undefined}
       whileTap={!isDrawn ? { scale: 0.97 } : undefined}
       onClick={onClick}

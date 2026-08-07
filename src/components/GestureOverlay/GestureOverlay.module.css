@@ -1,0 +1,74 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+/* ── Mini camera ── */
+
+.cameraMini {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  width: 120px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(140, 180, 220, 0.2);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.miniVideo {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform: scaleX(-1);
+}
+
+.handStatus {
+  display: block;
+  text-align: center;
+  padding: 3px 6px;
+  font-size: 0.65rem;
+  color: rgba(200, 200, 200, 0.7);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* ── Skip button ── */
+
+.skipBtn {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  background: rgba(140, 180, 220, 0.1);
+  border: 1px solid rgba(140, 180, 220, 0.2);
+  color: rgba(140, 180, 220, 0.8);
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 55;
+}
+
+.skipBtn:hover {
+  background: rgba(140, 180, 220, 0.2);
+}
+
+@media (max-width: 768px) {
+  .cameraMini {
+    bottom: 100px;
+    right: 8px;
+    width: 90px;
+  }
+  .skipBtn {
+    top: 8px;
+    right: 8px;
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+}

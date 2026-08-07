@@ -1,0 +1,138 @@
+.panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 220px;
+  background: rgba(12, 12, 32, 0.9);
+  border-left: 1px solid rgba(201, 169, 110, 0.1);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.section {
+  margin-bottom: 4px;
+}
+
+.label {
+  font-size: 0.68rem;
+  color: rgba(200, 190, 170, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.value {
+  font-size: 0.85rem;
+  color: rgba(200, 190, 170, 0.8);
+}
+
+.ok {
+  color: rgba(100, 200, 140, 0.85);
+}
+
+.muted {
+  color: rgba(200, 190, 170, 0.4);
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid rgba(201, 169, 110, 0.08);
+  margin: 6px 0;
+}
+
+/* ── Toggle ── */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: rgba(200, 190, 170, 0.7);
+}
+
+.toggle input {
+  accent-color: rgba(140, 180, 220, 0.8);
+}
+
+/* ── Buttons ── */
+
+.actionBtn {
+  width: 100%;
+  padding: 8px 0;
+  background: rgba(201, 169, 110, 0.06);
+  border: 1px solid rgba(201, 169, 110, 0.1);
+  border-radius: 8px;
+  color: rgba(200, 190, 170, 0.65);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.actionBtn:hover {
+  background: rgba(201, 169, 110, 0.12);
+  color: rgba(200, 190, 170, 0.9);
+}
+
+.switchBtn {
+  border-color: rgba(140, 180, 220, 0.2);
+  color: rgba(140, 180, 220, 0.7);
+  margin-top: 4px;
+}
+
+.switchBtn:hover {
+  background: rgba(140, 180, 220, 0.1);
+  color: rgba(140, 180, 220, 0.9);
+}
+
+/* ── Tutorial ── */
+
+.tutorial {
+  font-size: 0.75rem;
+  color: rgba(200, 190, 170, 0.5);
+  line-height: 1.5;
+}
+
+@media (max-width: 1199px) {
+  .panel {
+    width: 180px;
+    padding: 14px 10px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: auto;
+    max-height: 35vh;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    border-left: none;
+    border-top: 1px solid rgba(201, 169, 110, 0.1);
+    overflow-y: auto;
+  }
+  .actionBtn {
+    width: auto;
+    flex: 1;
+    min-width: 80px;
+    font-size: 0.7rem;
+    padding: 6px 8px;
+  }
+  .section {
+    display: none;
+  }
+}

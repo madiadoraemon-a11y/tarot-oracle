@@ -5,9 +5,9 @@ import TarotCardComponent from '../TarotCard/TarotCard';
 import styles from './ReadingResult.module.css';
 
 export default function ReadingResult() {
-  const { state, backToSelect, resetGame } = useGame();
+  const { state, backToSelect, backToModeSelection, resetGame } = useGame();
   const { saveReading } = useReadingHistory();
-  const { selectedSpread, drawnCards, userQuestion } = state;
+  const { selectedSpread, drawnCards, userQuestion, readingContent, readingStatus } = state;
 
   if (!selectedSpread) return null;
 
@@ -43,6 +43,23 @@ export default function ReadingResult() {
           <p className={styles.question}>「{userQuestion}」</p>
         )}
       </motion.div>
+
+      {/* AI Reading content (if available) */}
+      {readingContent && (
+        <motion.div
+          className={styles.readingContent}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className={styles.readingText}>
+            {readingContent.split('\n').map((line, i) => (
+              <p key={i}>{line || ' '}</p>
+            ))}
+          </div>
+          <div className={styles.aiNote}>✦ 以上内容由 AI 生成，仅供娱乐和自我反思</div>
+        </motion.div>
+      )}
 
       {/* Spread layout with all cards flipped */}
       <div className={styles.spreadLayout}>
@@ -91,6 +108,9 @@ export default function ReadingResult() {
       >
         <button className={styles.btnPrimary} onClick={handleSave}>
           ✦ 保存到历史记录
+        </button>
+        <button className={styles.btnSecondary} onClick={backToModeSelection}>
+          换种模式再来
         </button>
         <button className={styles.btnSecondary} onClick={backToSelect}>
           选择其他牌阵

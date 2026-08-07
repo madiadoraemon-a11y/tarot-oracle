@@ -167,6 +167,37 @@
   color: var(--color-gold-pale);
 }
 
+/* ── AI reading content ── */
+
+.readingContent {
+  background: rgba(18, 18, 42, 0.5);
+  border: 1px solid var(--color-gold-dim);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.readingText {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--color-gold-pale);
+  line-height: 1.9;
+  opacity: 0.85;
+}
+
+.readingText p {
+  margin: 0 0 8px;
+}
+
+.aiNote {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(201, 169, 110, 0.06);
+  font-size: 0.7rem;
+  color: var(--color-gold-dim);
+  text-align: center;
+  opacity: 0.5;
+}
+
 @media (max-width: 600px) {
   .positionsContainer {
     min-height: 280px;

@@ -7,4 +7,12 @@ export default defineConfig({
   build: {
     outDir: 'docs',
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://tarot-reading-api.tarot-reading-api.workers.dev',
+        changeOrigin: true,
+      },
+    },
+  },
 });

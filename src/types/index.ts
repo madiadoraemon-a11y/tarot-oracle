@@ -40,13 +40,41 @@ export interface SpreadConfig {
 
 // ── Game state ──
 
+export type InteractionMode = 'classic' | 'gesture';
+
+export type GesturePhase =
+  | 'mode-selection'
+  | 'camera-setup'
+  | 'calibration'
+  | 'reading-ready'
+  | 'reading-armed'
+  | 'reading'
+  | 'completed';
+
 export type GamePhase =
   | 'meditation'
   | 'selecting'
+  | 'mode-selection'
   | 'shuffling'
   | 'drawing'
   | 'revealing'
-  | 'result';
+  | 'result'
+  | GesturePhase;
+
+export type GestureIntent =
+  | { type: 'HAND_VISIBLE'; confidence: number }
+  | { type: 'SHUFFLE_PROGRESS'; progress: number; direction: -1 | 1 }
+  | { type: 'CARD_HOVER'; normalizedX: number; normalizedY: number }
+  | { type: 'CARD_SCROLL'; direction: -1 | 1 }
+  | { type: 'SCROLL_POSITION'; normalizedX: number }
+  | { type: 'CURSOR_MODE'; normalizedX: number; normalizedY: number }
+  | { type: 'DRAW_ARMED'; cardId: string }
+  | { type: 'DRAW_CONFIRMED'; cardId: string }
+  | { type: 'REVEAL_TRIGGERED' }
+  | { type: 'READING_OPEN_PALM_CONFIRMED' }
+  | { type: 'READING_FIST_CONFIRMED' }
+  | { type: 'GESTURE_CANCELLED'; reason: string };
+
 
 export interface DrawnCard {
   positionId: string;
@@ -54,8 +82,17 @@ export interface DrawnCard {
   isReversed: boolean;
 }
 
+export interface FlyingCardInfo {
+  card: TarotCard;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}
+
 export interface GameState {
   phase: GamePhase;
+  interactionMode: InteractionMode;
   deck: TarotCard[];
   selectedSpread: SpreadConfig | null;
   userQuestion: string;
@@ -64,6 +101,16 @@ export interface GameState {
   currentDrawPosition: string | null;
   shuffleCount: number;
   activeCardIndex: number;
+  // Gesture-related
+  cameraReady: boolean;
+  handDetected: boolean;
+  hoveredCardId: string | null;
+  readingArmedAt: number | null;
+  readingTriggered: boolean;
+  readingContent: string;
+  readingStatus: 'idle' | 'generating' | 'completed' | 'failed' | 'timeout';
+  // Flying card animation
+  flyingCard: FlyingCardInfo | null;
 }
 
 // ── History ──

@@ -4,3 +4,6 @@ dist
 *.pdf
 .DS_Store
 /waite/
+.env
+.env.local
+.env.production

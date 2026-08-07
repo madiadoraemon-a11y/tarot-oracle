@@ -1,0 +1,86 @@
+.cursor {
+  position: fixed;
+  pointer-events: none;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  margin-top: -14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Outer glow ring ── */
+.ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(140, 180, 220, 0.5);
+  box-shadow:
+    0 0 10px rgba(140, 180, 220, 0.3),
+    0 0 25px rgba(140, 180, 220, 0.12),
+    inset 0 0 8px rgba(140, 180, 220, 0.08);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.ringHover {
+  border-color: rgba(201, 169, 110, 0.8);
+  box-shadow:
+    0 0 16px rgba(201, 169, 110, 0.45),
+    0 0 36px rgba(201, 169, 110, 0.2),
+    0 0 56px rgba(201, 169, 110, 0.08),
+    inset 0 0 12px rgba(201, 169, 110, 0.12);
+}
+
+.ringPinch {
+  border-color: rgba(180, 220, 140, 0.9);
+  box-shadow:
+    0 0 20px rgba(180, 220, 140, 0.55),
+    0 0 44px rgba(180, 220, 140, 0.25),
+    0 0 64px rgba(180, 220, 140, 0.1),
+    inset 0 0 16px rgba(180, 220, 140, 0.16);
+}
+
+/* ── Inner dot ── */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(220, 235, 255, 0.95), rgba(140, 180, 220, 0.7));
+  box-shadow: 0 0 8px rgba(180, 210, 255, 0.6);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.hovering .dot {
+  background: radial-gradient(circle, rgba(255, 235, 180, 0.95), rgba(201, 169, 110, 0.8));
+  box-shadow: 0 0 12px rgba(201, 169, 110, 0.7);
+}
+
+.pinching .dot {
+  background: radial-gradient(circle, rgba(220, 255, 200, 0.95), rgba(150, 210, 130, 0.85));
+  box-shadow: 0 0 14px rgba(180, 220, 140, 0.8);
+}
+
+/* ── Expanding pinch ring ── */
+.pinchRing {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid rgba(180, 220, 140, 0.5);
+}
+
+/* ── Mobile: smaller cursor ── */
+@media (max-width: 768px) {
+  .cursor {
+    width: 22px;
+    height: 22px;
+    margin-left: -11px;
+    margin-top: -11px;
+  }
+
+  .dot {
+    width: 5px;
+    height: 5px;
+  }
+}
