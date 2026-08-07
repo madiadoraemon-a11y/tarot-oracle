@@ -101,7 +101,7 @@ ${cardDescriptions}
 // ── Main handler ──
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // CORS preflight
@@ -121,7 +121,7 @@ export default {
 
     // POST /api/readings
     if (url.pathname === '/api/readings' && request.method === 'POST') {
-      return handleReading(request, env);
+      return handleReading(request, env, ctx);
     }
 
     // POST /api/readings/:id/follow-ups
@@ -215,7 +215,11 @@ function esc(s: string): string {
 
 // ── Reading handler ──
 
-async function handleReading(request: Request, env: Env): Promise<Response> {
+async function handleReading(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+): Promise<Response> {
   let body: ReadingRequest;
   try {
     body = await request.json();
@@ -255,12 +259,12 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
         ],
         stream: true,
         temperature: 0.7,
-        max_tokens: 2048,
+        max_tokens: 1500,
       }),
     });
 
-    if (!aiResp.ok) {
-      const errText = await aiResp.text();
+    if (!aiResp.ok || !aiResp.body) {
+      const errText = aiResp.ok ? '' : await aiResp.text();
       console.error('DeepSeek API error:', aiResp.status, errText);
       return corsResponse(Response.json(
         { error: 'AI service error', status: aiResp.status },
@@ -268,18 +272,24 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
       ));
     }
 
-    // Read full response, clean it, then stream back to client
-    const rawSSE = await aiResp.text();
-    const rawContent = extractContentFromSSE(rawSSE);
-    const cleanedContent = cleanContent(rawContent);
+    // Tee the stream: one copy to client (instant), one for background KV save
+    const [clientStream, captureStream] = aiResp.body.tee();
 
-    // Save cleaned content to KV
-    await saveRecord(env, body, cleanedContent);
+    ctx.waitUntil(
+      (async () => {
+        try {
+          const rawSSE = await new Response(captureStream).text();
+          const rawContent = extractContentFromSSE(rawSSE);
+          const cleaned = cleanContent(rawContent);
+          await saveRecord(env, body, cleaned);
+        } catch (err) {
+          console.error('KV save error:', err);
+        }
+      })(),
+    );
 
-    // Re-wrap as SSE and return
-    const cleanedSSE = wrapAsSSE(cleanedContent);
     return corsResponse(
-      new Response(cleanedSSE, {
+      new Response(clientStream, {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -359,23 +369,6 @@ function cleanContent(text: string): string {
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
   return cleaned;
-}
-
-// ── Re-wrap plain text as SSE data stream ──
-
-function wrapAsSSE(text: string): string {
-  const lines: string[] = [];
-  // Split into small chunks to simulate streaming
-  let remaining = text;
-  while (remaining.length > 0) {
-    // Take chunks of ~6 chars for a streaming feel
-    const chunkSize = Math.min(6 + Math.floor(Math.random() * 4), remaining.length);
-    const chunk = remaining.slice(0, chunkSize);
-    remaining = remaining.slice(chunkSize);
-    lines.push(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n`);
-  }
-  lines.push('data: [DONE]\n');
-  return lines.join('');
 }
 
 // ── Follow-up handler ──
