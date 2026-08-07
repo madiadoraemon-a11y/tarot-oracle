@@ -2,6 +2,6 @@ name = "tarot-reading-api"
 main = "index.ts"
 compatibility_date = "2025-08-03"
 
-# Free tier: 100,000 requests/day
-# Deploy: npx wrangler deploy
-# Set secret: npx wrangler secret put DEEPSEEK_API_KEY
+[[kv_namespaces]]
+binding = "READING_HISTORY"
+id = "ca91f80076ec4c5bacb0b526f542bbd2"

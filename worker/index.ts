@@ -1,12 +1,13 @@
 /**
  * Cloudflare Worker — AI Reading Proxy
  * Proxies structured tarot reading requests to DeepSeek API.
- * API key stays server-side; never exposed to the frontend.
+ * Stores reading history in KV for admin review.
  *
  * Deploy: npx wrangler deploy
- * Env vars (set via `npx wrangler secret put DEEPSEEK_API_KEY`):
- *   DEEPSEEK_API_KEY — DeepSeek API key
+ * Secrets:
+ *   DEEPSEEK_API_KEY  — DeepSeek API key
  *   DEEPSEEK_BASE_URL — (optional) defaults to https://api.deepseek.com/v1
+ *   ADMIN_TOKEN       — (optional) password for /admin page
  */
 
 interface ReadingRequest {
@@ -33,6 +34,19 @@ interface FollowUpRequest {
   question: string;
   previousReading: string;
   sessionContext: ReadingRequest;
+}
+
+interface ReadingRecord {
+  timestamp: number;
+  timeStr: string;
+  question: string;
+  spreadName: string;
+  cards: Array<{
+    nameZh: string;
+    nameEn: string;
+    orientation: string;
+    positionLabel: string;
+  }>;
 }
 
 // ── System prompt ──
@@ -106,6 +120,11 @@ export default {
       return corsResponse(Response.json({ status: 'ok' }));
     }
 
+    // Admin dashboard
+    if (url.pathname === '/admin') {
+      return handleAdmin(url, env);
+    }
+
     // POST /api/readings
     if (url.pathname === '/api/readings' && request.method === 'POST') {
       return handleReading(request, env);
@@ -120,6 +139,79 @@ export default {
     return corsResponse(new Response('Not Found', { status: 404 }));
   },
 };
+
+// ── Admin dashboard ──
+
+async function handleAdmin(url: URL, env: Env): Promise<Response> {
+  // Simple token check
+  const adminToken = env.ADMIN_TOKEN;
+  if (adminToken && url.searchParams.get('token') !== adminToken) {
+    return new Response('Unauthorized — add ?token= to the URL', { status: 401 });
+  }
+
+  const kv = env.READING_HISTORY;
+
+  // List recent readings (up to 50)
+  const listResult = await kv.list({ prefix: 'reading:', limit: 50 });
+  const records: ReadingRecord[] = [];
+
+  // Sort keys by timestamp (newest first) — keys are "reading:<ts>:<suffix>"
+  const sortedKeys = [...listResult.keys].sort((a, b) => b.name.localeCompare(a.name));
+
+  for (const key of sortedKeys) {
+    const value = await kv.get(key.name);
+    if (value) {
+      try {
+        records.push(JSON.parse(value));
+      } catch { /* skip malformed */ }
+    }
+  }
+
+  return new Response(renderAdminPage(records), {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  });
+}
+
+function renderAdminPage(records: ReadingRecord[]): string {
+  const rows = records.map((r, i) => `
+    <tr>
+      <td>${esc(r.timeStr)}</td>
+      <td>${esc(r.spreadName)}</td>
+      <td>${esc(r.question || '(无问题)')}</td>
+      <td>${r.cards.map(c => esc(`${c.nameZh}${c.orientation === 'reversed' ? '(逆)' : ''} [${c.positionLabel}]`)).join('<br>')}</td>
+    </tr>
+  `).join('');
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>塔罗解读记录</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0a0a1a; color: #e0d8c0; padding: 20px; }
+  h1 { color: #c9a96e; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid rgba(201,169,110,0.2); text-align: left; vertical-align: top; }
+  th { color: #c9a96e; position: sticky; top: 0; background: #0a0a1a; }
+  tr:hover { background: rgba(201,169,110,0.05); }
+  .count { color: #888; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h1>🔮 塔罗解读记录</h1>
+<p class="count">共 ${records.length} 条记录（最近 50 条）</p>
+<table>
+<thead><tr><th>时间</th><th>牌阵</th><th>问题</th><th>卡牌</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="4">暂无记录</td></tr>'}</tbody>
+</table>
+</body>
+</html>`;
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 // ── Reading handler ──
 
@@ -138,6 +230,9 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
   if ((body.question?.length ?? 0) > 500) {
     return corsResponse(Response.json({ error: 'Question too long' }, { status: 400 }));
   }
+
+  // Save reading record to KV (don't block response)
+  const savePromise = saveRecord(env, body);
 
   const apiKey = env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -176,11 +271,12 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
       ));
     }
 
-    // Stream the response
     const stream = aiResp.body;
     if (!stream) {
       return corsResponse(Response.json({ error: 'No response stream' }, { status: 502 }));
     }
+
+    await savePromise;
 
     return corsResponse(
       new Response(stream, {
@@ -194,6 +290,35 @@ async function handleReading(request: Request, env: Env): Promise<Response> {
   } catch (err) {
     console.error('Reading error:', err);
     return corsResponse(Response.json({ error: 'Internal error' }, { status: 500 }));
+  }
+}
+
+// ── Save reading record to KV ──
+
+async function saveRecord(env: Env, body: ReadingRequest): Promise<void> {
+  try {
+    const now = new Date();
+    const ts = Date.now();
+    const key = `reading:${ts}:${body.sessionId.slice(0, 8)}`;
+
+    const record: ReadingRecord = {
+      timestamp: ts,
+      timeStr: now.toISOString().replace('T', ' ').slice(0, 19),
+      question: body.question || '',
+      spreadName: body.spread.name,
+      cards: body.cards
+        .sort((a, b) => a.drawOrder - b.drawOrder)
+        .map(c => ({
+          nameZh: c.nameZh,
+          nameEn: c.name,
+          orientation: c.orientation === 'upright' ? '正位' : '逆位',
+          positionLabel: body.spread.positions.find(p => p.id === c.positionId)?.name || c.positionId,
+        })),
+    };
+
+    await env.READING_HISTORY.put(key, JSON.stringify(record));
+  } catch (err) {
+    console.error('KV save error:', err);
   }
 }
 
@@ -271,6 +396,8 @@ async function handleFollowUp(request: Request, env: Env): Promise<Response> {
 interface Env {
   DEEPSEEK_API_KEY: string;
   DEEPSEEK_BASE_URL?: string;
+  ADMIN_TOKEN?: string;
+  READING_HISTORY: KVNamespace;
 }
 
 function corsResponse(resp: Response): Response {
