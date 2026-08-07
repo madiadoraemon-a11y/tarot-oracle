@@ -60,16 +60,17 @@ function buildSystemPrompt(): string {
 2. 鼓励用户保有自主决定权，塔罗是自我反思的工具。
 3. 语言温暖、包容、不评判。
 4. 始终基于牌面含义、牌位和牌之间的关联进行解读。
+5. 不要使用任何 Markdown 格式——禁止使用 #、*、**、- 等标记符号。直接输出纯文本段落。
+6. 禁止任何开篇寒暄或引导语（如"让我为你解读""牌面已经铺开""这次的牌阵"等）。直接开始逐牌解读，不要铺垫。
 
-按以下结构回应：
-1. 开篇回应：根据用户问题和牌面，给出2-3句直接的总体回应。不要提及牌阵名称或牌的数量。
-2. 逐牌解读：对每张牌，结合牌位含义、正逆位和基础牌义进行解读。
-3. 牌际关联：指出牌与牌之间的呼应、冲突、推动或阻碍关系。
-4. 核心主题：总结2-3个贯穿牌阵的核心主题（不要使用任何加粗或星号标记）。
-5. 行动建议：提供可选的小步骤或思考方向。
-6. 温馨提醒：提醒用户解读仅供自我反思，决定权在用户手中。
+按以下结构回应（直接输出内容，不要写"1. 逐牌解读"这样的编号标题）：
+逐牌解读：对每张牌，结合牌位含义、正逆位和基础牌义进行解读。
+牌际关联：指出牌与牌之间的呼应、冲突、推动或阻碍关系。
+核心主题：总结2-3个贯穿牌阵的核心主题。
+行动建议：提供可选的小步骤或思考方向。
+温馨提醒：提醒用户解读仅供自我反思，决定权在用户手中。
 
-风格：流畅优美的中文，避免绝对预言句式，保持积极有建设性的基调。`;
+风格：流畅优美的中文，避免绝对预言句式，保持积极有建设性的基调。直接开始，不要任何引言或开场白。`;
 }
 
 // ── Build user message from structured request ──
@@ -355,18 +356,28 @@ function extractContentFromSSE(sse: string): string {
 function cleanContent(text: string): string {
   let cleaned = text;
 
-  // Remove "本次使用……牌阵……含义" patterns in opening response
-  // Matches sentences like "本次使用「XXX」牌阵，共抽出N张牌……"
-  cleaned = cleaned.replace(/本次使用[^。！？\n]*牌阵[^。！？\n]*[。]/g, '');
+  // Strip markdown heading markers (# ## ### etc.)
+  cleaned = cleaned.replace(/^#{1,6}\s*/gm, '');
 
-  // Strip ** markers
+  // Strip ** (bold) and * (italic/list) markers
   cleaned = cleaned.replace(/\*\*/g, '');
+  cleaned = cleaned.replace(/\*/g, '');
 
-  // Remove local offline warning (safety net, shouldn't come from DeepSeek)
+  // Remove opening fluff / banter patterns
+  cleaned = cleaned.replace(/本次使用[^。！？\n]*牌阵[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/这次的牌阵[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/让我[^。！？\n]{0,20}为你[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/牌面已经铺开[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/每张牌都在[^。！？\n]*[。！？]/g, '');
+
+  // Remove local offline warning (safety net)
   cleaned = cleaned.replace(/[⚠>]\s*以上解读由本地生成[^\n。！？]*[。]?/g, '');
 
   // Collapse blank lines
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  // Trim leading whitespace from result
+  cleaned = cleaned.trim();
 
   return cleaned;
 }

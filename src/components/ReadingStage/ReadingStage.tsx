@@ -318,23 +318,11 @@ export default function ReadingStage() {
   );
 }
 
-/** Simple markdown-like formatting for reading content */
+/** Simple plain-text formatting for reading content */
 function formatReadingContent(text: string): JSX.Element[] {
   return text.split('\n').map((line, i) => {
     const trimmed = line.trim();
     if (!trimmed) return <br key={i} />;
-    if (trimmed.startsWith('### ')) {
-      return <h3 key={i} className="md-h3">{trimmed.slice(4)}</h3>;
-    }
-    if (trimmed.startsWith('## ')) {
-      return <h2 key={i} className="md-h2">{trimmed.slice(3)}</h2>;
-    }
-    if (trimmed.startsWith('**') && trimmed.includes('**')) {
-      return <p key={i}><strong>{trimmed.replace(/\*\*/g, '')}</strong></p>;
-    }
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      return <li key={i} className="md-li">{trimmed.slice(2)}</li>;
-    }
     return <p key={i}>{trimmed}</p>;
   });
 }

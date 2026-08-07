@@ -8,6 +8,30 @@ import { ReadingRequest, ReadingResponse } from './types';
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
+/** Strip markdown and opening fluff from AI-generated text */
+function cleanAiText(text: string): string {
+  let cleaned = text;
+
+  // Strip markdown heading markers (# ## ### etc.)
+  cleaned = cleaned.replace(/^#{1,6}\s*/gm, '');
+
+  // Strip ** (bold) and * (italic/list) markers
+  cleaned = cleaned.replace(/\*\*/g, '');
+  cleaned = cleaned.replace(/\*/g, '');
+
+  // Remove opening fluff / banter patterns
+  cleaned = cleaned.replace(/本次使用[^。！？\n]*牌阵[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/这次的牌阵[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/让我[^。！？\n]{0,20}为你[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/牌面已经铺开[^。！？\n]*[。！？]/g, '');
+  cleaned = cleaned.replace(/每张牌都在[^。！？\n]*[。！？]/g, '');
+
+  // Collapse excess blank lines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  return cleaned.trim();
+}
+
 export interface ReadingStreamCallbacks {
   onToken: (token: string) => void;
   onDone: (fullText: string) => void;
@@ -109,7 +133,7 @@ export class ReadingService {
                 const token = parsed.choices?.[0]?.delta?.content || '';
                 if (token) {
                   fullText += token;
-                  callbacks.onToken(fullText);
+                  callbacks.onToken(cleanAiText(fullText));
                 }
               } catch {
                 // Skip unparseable lines
@@ -133,13 +157,13 @@ export class ReadingService {
         // JSON response (non-streaming or error fallback)
         const data = await resp.json();
         fullText = data.content || data.reading || '';
-        callbacks.onToken(fullText);
+        callbacks.onToken(cleanAiText(fullText));
       }
 
-      callbacks.onDone(fullText);
+      callbacks.onDone(cleanAiText(fullText));
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        callbacks.onDone(fullText); // Graceful cancel
+        callbacks.onDone(cleanAiText(fullText)); // Graceful cancel
         return;
       }
       callbacks.onError(err instanceof Error ? err.message : '网络错误');
@@ -199,17 +223,17 @@ export class ReadingService {
               const token = parsed.choices?.[0]?.delta?.content || '';
               if (token) {
                 fullText += token;
-                callbacks.onToken(fullText);
+                callbacks.onToken(cleanAiText(fullText));
               }
             } catch { /* skip */ }
           }
         }
       }
 
-      callbacks.onDone(fullText);
+      callbacks.onDone(cleanAiText(fullText));
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        callbacks.onDone(fullText);
+        callbacks.onDone(cleanAiText(fullText));
         return;
       }
       callbacks.onError(err instanceof Error ? err.message : '网络错误');

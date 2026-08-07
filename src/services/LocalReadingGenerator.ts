@@ -8,14 +8,6 @@ import { ReadingRequest } from './types';
 
 // ── Template fragments ──
 
-const OPENINGS = [
-  '让我来为你解读这次的牌面。',
-  '看着这些牌面，我能感受到它们传递的信息。',
-  '牌面已经铺开，让我为你一一解读。',
-  '这次的牌阵很有意思，让我来为你慢慢解读。',
-  '每张牌都在与你的问题对话，让我为你解读它们的语言。',
-];
-
 const CLOSINGS = [
   '这些牌面所揭示的，是你内在已经知道但可能尚未正视的真相。无论牌面如何，最终的决定权始终在你手中。愿你在这段旅程中找到属于自己的答案。',
   '牌面是镜子，映照的是你内心的风景。每一张牌的智慧都指向同一个方向——你内心深处早已知晓的方向。带着这些启示前行吧，但请记得，你才是自己人生的作者。',
@@ -125,21 +117,8 @@ function getPositionContextWord(posName: string): string {
 export function generateLocalReading(req: ReadingRequest): string {
   const lines: string[] = [];
   const cards = [...req.cards].sort((a, b) => a.drawOrder - b.drawOrder);
-  const opening = pick(OPENINGS);
 
-  // ── 1. 开篇回应 ──
-  lines.push('## 开篇回应');
-  lines.push('');
-  const questionLine = req.question
-    ? `你提出了关于「${req.question}」的问题，`
-    : '';
-  lines.push(`${opening}${questionLine}让我逐一为你分析每张牌的含义。`);
-  lines.push('');
-
-  // ── 2. 逐牌解读 ──
-  lines.push('## 逐牌解读');
-  lines.push('');
-
+  // ── 1. 逐牌解读 ──
   for (let i = 0; i < cards.length; i++) {
     const c = cards[i];
     const pos = req.spread.positions.find(p => p.id === c.positionId);
@@ -147,33 +126,25 @@ export function generateLocalReading(req: ReadingRequest): string {
     const posCtx = getPositionContextWord(posName);
     const orientation = c.orientation === 'upright' ? '正位' : '逆位';
 
-    lines.push(`### 第${i + 1}张：${c.nameZh}（${c.name}）—— ${posName} ${orientation}`);
+    lines.push(`第${i + 1}张：${c.nameZh}（${c.name}）—— ${posName} ${orientation}`);
     lines.push('');
     lines.push(`${posCtx}${c.baseMeaning}`);
     lines.push('');
   }
 
-  // ── 3. 牌际关联 ──
-  lines.push('## 牌际关联');
-  lines.push('');
+  // ── 2. 牌际关联 ──
   lines.push(analyzeRelations(cards, req.spread));
   lines.push('');
 
-  // ── 4. 核心主题 ──
-  lines.push('## 核心主题');
-  lines.push('');
+  // ── 3. 核心主题 ──
   lines.push(generateThemes(cards));
   lines.push('');
 
-  // ── 5. 行动建议 ──
-  lines.push('## 行动建议');
-  lines.push('');
+  // ── 4. 行动建议 ──
   lines.push(generateSuggestions(cards));
   lines.push('');
 
-  // ── 6. 温馨提醒 ──
-  lines.push('## 温馨提醒');
-  lines.push('');
+  // ── 5. 温馨提醒 ──
   lines.push(pick(CLOSINGS));
   lines.push('');
 
